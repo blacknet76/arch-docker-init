@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+USERID=$UID
+
+# Install docker and docker-compose
+sudo pacman -S docker docker-compose
+
+# Add user to group docker
+sudo gpasswd -a docker ${USER}
+GROUPID="$(cat /etc/group | grep docker | cut -d':' -f3)"
+
+# Write some enviroments and create docker folder and set permissions
+echo -e "\nPUID=$USERID\nPGID=$GROUPID\nTZ=\"Europe/Berlin\"\nUSERDIR=\"/home/$(whoami)/docker\"" | sudo tee -a /etc/environment > /dev/null 2>&1
+mkdir ~/docker
+sudo setfacl -Rdm g:docker:rwx ~/docker
+sudo chmod -R 775 ~/docker
+
+# Add Remote API for e.g. Portainer and reload daemon and docker
+sudo sed -i '/usr/lib/systemd/system/docker.service' -e "s/-H fd:\/\//-H fd:\/\/ -H tcp:\/\/0.0.0.0:2375/g"
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+echo -e "\nDone. Relogin for full functionality.\n" 
